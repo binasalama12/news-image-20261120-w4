@@ -3,6 +3,7 @@
 # A single-page broadsheet: 48 stories, one picture. All art is drawn
 # here with PIL primitives; nothing is photographed or copied in.
 import math
+import os
 import random
 
 from PIL import Image, ImageDraw, ImageFont
@@ -27,20 +28,20 @@ FL = "/usr/share/fonts/truetype/liberation/"
 def F(name, size):
     try:
         return ImageFont.truetype(FD + name, size)
-    except Exception:
+    except OSError:
         try:
-            return ImageFont.truetype(FL + name, size)
-        except Exception:
+            return ImageFont.truetype(name, size)
+        except OSError:
             return ImageFont.load_default()
 
 
 def SF(name, size):
     try:
         return ImageFont.truetype(FL + name, size)
-    except Exception:
+    except OSError:
         try:
-            return ImageFont.truetype(FD + name, size)
-        except Exception:
+            return ImageFont.truetype(name, size)
+        except OSError:
             return ImageFont.load_default()
 
 
@@ -686,8 +687,25 @@ def main():
            font=F(SANS, 12), fill=GREY)
 
     out = im.resize((1024, 1024), Image.LANCZOS)
-    out.save("entry.png")
-    print("wrote entry.png 1024x1024")
+    candidates = []
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR")
+    if out_dir:
+        candidates.append(out_dir)
+    candidates.append(".")
+    candidates.append(os.path.dirname(os.path.abspath(__file__)))
+    last_err = None
+    saved = None
+    for cand in candidates:
+        try:
+            path = os.path.join(cand, "entry.png")
+            out.save(path)
+            saved = path
+            break
+        except OSError as err:
+            last_err = err
+    if saved is None:
+        raise last_err
+    print("wrote %s 1024x1024" % saved)
 
 
 if __name__ == "__main__":
